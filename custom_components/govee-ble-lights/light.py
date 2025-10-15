@@ -224,11 +224,19 @@ class GoveeBluetoothLight(LightEntity):
         for categoryIdx, category in enumerate(json_data['data']['categories']):
             for sceneIdx, scene in enumerate(category['scenes']):
                 for leffectIdx, lightEffect in enumerate(scene['lightEffects']):
-                    for seffectIxd, specialEffect in enumerate(lightEffect['specialEffect']):
-                        # if 'supportSku' not in specialEffect or self._model in specialEffect['supportSku']:
-                        # Workaround cause we need to store some metadata in effect (effect names not unique)
-                        indexes = str(categoryIdx) + "/" + str(sceneIdx) + "/" + str(leffectIdx) + "/" + str(
-                            seffectIxd)
+                    # Check if specialEffect has entries
+                    if lightEffect['specialEffect']:
+                        for seffectIxd, specialEffect in enumerate(lightEffect['specialEffect']):
+                            # if 'supportSku' not in specialEffect or self._model in specialEffect['supportSku']:
+                            # Workaround cause we need to store some metadata in effect (effect names not unique)
+                            indexes = str(categoryIdx) + "/" + str(sceneIdx) + "/" + str(leffectIdx) + "/" + str(
+                                seffectIxd)
+                            effect_list.append(
+                                category['categoryName'] + " - " + scene['sceneName'] + ' - ' + lightEffect[
+                                    'scenceName'] + " [" + indexes + "]")
+                    else:
+                        # Fallback to main lightEffect if no specialEffect entries
+                        indexes = str(categoryIdx) + "/" + str(sceneIdx) + "/" + str(leffectIdx) + "/0"
                         effect_list.append(
                             category['categoryName'] + " - " + scene['sceneName'] + ' - ' + lightEffect[
                                 'scenceName'] + " [" + indexes + "]")
@@ -288,13 +296,21 @@ class GoveeBluetoothLight(LightEntity):
                 category = json_data['data']['categories'][categoryIndex]
                 scene = category['scenes'][sceneIndex]
                 lightEffect = scene['lightEffects'][lightEffectIndex]
-                specialEffect = lightEffect['specialEffect'][specialEffectIndex]
+                
+                # Handle both specialEffect and fallback to main lightEffect
+                if lightEffect['specialEffect'] and specialEffectIndex < len(lightEffect['specialEffect']):
+                    # Use specialEffect if available
+                    specialEffect = lightEffect['specialEffect'][specialEffectIndex]
+                    scence_param = specialEffect['scenceParam']
+                else:
+                    # Fallback to main lightEffect scenceParam
+                    scence_param = lightEffect['scenceParam']
 
                 # Prepare packets to send big payload in separated chunks
                 for command in prepareMultiplePacketsData(0xa3,
                                                           array.array('B', [0x02]),
                                                           array.array('B',
-                                                                      base64.b64decode(specialEffect['scenceParam'])
+                                                                      base64.b64decode(scence_param)
                                                                       )):
                     commands.append(command)
 
